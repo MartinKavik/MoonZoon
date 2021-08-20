@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+        <html lang="en">
+        
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+          <title>TodoMVC example</title>
+          <link rel="preload" href="/_api/pkg/frontend_bg.wasm" as="fetch" type="application/wasm" crossorigin>
+          <link rel="modulepreload" href="/_api/pkg/frontend.js" crossorigin>
+          <style>/**
+ * Minified by jsDelivr using clean-css v4.2.3.
+ * Original file: /npm/modern-normalize@1.1.0/modern-normalize.css
+ *
+ * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ */
+/*! modern-normalize v1.1.0 | MIT License | https://github.com/sindresorhus/modern-normalize */
+*,::after,::before{box-sizing:border-box}html{-moz-tab-size:4;tab-size:4}html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji'}hr{height:0;color:inherit}abbr[title]{text-decoration:underline dotted}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}::-moz-focus-inner{border-style:none;padding:0}:-moz-focusring{outline:1px dotted ButtonText}:-moz-ui-invalid{box-shadow:none}legend{padding:0}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}
+/*# sourceMappingURL=/sm/b8ae781793ee4eb86edef3f2a2ac43a5575d063ed8cd287d7553f9f1b2776616.map */
+</style><style>html {
+    line-height: normal;
+}
+
+* {
+    margin: 0;
+    position: relative;
+    border: none;
+    font-weight: inherit;
+    font-size: inherit;
+    border-radius: 0;
+}
+
+*:focus-visible, *:focus {
+    outline: none;
+}
+
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#app > .center_x {
+    align-self: center;
+}
+
+#app > .center_y {
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+#app > .align_bottom {
+    margin-top: auto;
+}
+
+#app > .align_left {
+    align-self: flex-start;
+}
+
+#app > .align_right {
+    align-self: flex-end;
+}
+
+#app > .exact_height {
+    flex-shrink: 0;
+}
+</style>
+          
+        </head>
+    
+        <body>
+          <section id="app"></section>
+    
+          <script type="text/javascript">
+            var ReconnectingEventSource=function(n){var r={};function i(e){if(r[e])return r[e].exports;var t=r[e]={i:e,l:!1,exports:{}};return n[e].call(t.exports,t,t.exports,i),t.l=!0,t.exports}return i.m=n,i.c=r,i.d=function(e,t,n){i.o(e,t)||Object.defineProperty(e,t,{enumerable:!0,get:n})},i.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},i.t=function(t,e){if(1&e&&(t=i(t)),8&e)return t;if(4&e&&"object"==typeof t&&t&&t.__esModule)return t;var n=Object.create(null);if(i.r(n),Object.defineProperty(n,"default",{enumerable:!0,value:t}),2&e&&"string"!=typeof t)for(var r in t)i.d(n,r,function(e){return t[e]}.bind(null,r));return n},i.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return i.d(t,"a",t),t},i.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},i.p="",i(i.s=0)}([function(e,t,n){var r,i,o;i=[e,n(1)],void 0===(o="function"==typeof(r=function(e,t){"use strict";var n=r(t);function r(e){return e&&e.__esModule?e:{default:e}}e.exports=n.default})?r.apply(t,i):r)||(e.exports=o)},function(e,t,n){var r,i,o;i=[t],void 0===(o="function"==typeof(r=function(e){"use strict";function s(e){if(Array.isArray(e)){for(var t=0,n=Array(e.length);t<e.length;t++){n[t]=e[t]}return n}else{return Array.from(e)}}function i(e,t){if(!(e instanceof t)){throw new TypeError("Cannot call a class as a function")}}Object.defineProperty(e,"__esModule",{value:true});var t=function(){function r(e,t){for(var n=0;n<t.length;n++){var r=t[n];r.enumerable=r.enumerable||false;r.configurable=true;if("value"in r)r.writable=true;Object.defineProperty(e,r.key,r)}}return function(e,t,n){if(t)r(e.prototype,t);if(n)r(e,n);return e}}(),n=function(){function r(e,t){var n=this;i(this,r);this._configuration=t!=null?Object.assign({},t):null;this._eventSource=null;this._lastEventId=null;this._timer=null;this._listeners={};this.url=e;this.readyState=0;this.max_retry_time=3e3;if(this._configuration!=null){if(this._configuration.lastEventId){this._lastEventId=this._configuration.lastEventId;delete this._configuration["lastEventId"]}if(this._configuration.max_retry_time){this.max_retry_time=this._configuration.max_retry_time;delete this._configuration["max_retry_time"]}}this._onevent_wrapped=function(e){n._onevent(e)};this._start()}t(r,[{key:"_start",value:function e(){var t=this;var n=this.url;if(this._lastEventId){if(n.indexOf("?")===-1){n+="?"}else{n+="&"}n+="lastEventId="+encodeURIComponent(this._lastEventId)}this._eventSource=new EventSource(n,this._configuration);this._eventSource.onopen=function(e){t._onopen(e)};this._eventSource.onerror=function(e){t._onerror(e)};this._eventSource.onmessage=function(e){t.onmessage(e)};var r=true;var i=false;var o=undefined;try{for(var s=Object.keys(this._listeners)[Symbol.iterator](),u;!(r=(u=s.next()).done);r=true){var a=u.value;this._eventSource.addEventListener(a,this._onevent_wrapped)}}catch(e){i=true;o=e}finally{try{if(!r&&s.return){s.return()}}finally{if(i){throw o}}}}},{key:"_onopen",value:function e(t){if(this.readyState===0){this.readyState=1;this.onopen(t)}}},{key:"_onerror",value:function e(t){var n=this;if(this.readyState===1){this.readyState=0;this.onerror(t)}if(this._eventSource){if(this._eventSource.readyState===2){this._eventSource.close();this._eventSource=null;var r=Math.round(this.max_retry_time*Math.random());this._timer=setTimeout(function(){return n._start()},r)}}}},{key:"_onevent",value:function e(t){if(t.lastEventId){this._lastEventId=t.lastEventId}var n=this._listeners[t.type];if(n!=null){var r=[].concat(s(n));for(var i=0;i<r.length;i++){var o=r[i];o(t)}}if(t.type==="message"){this.onmessage(t)}}},{key:"onopen",value:function e(t){}},{key:"onerror",value:function e(t){}},{key:"onmessage",value:function e(t){}},{key:"close",value:function e(){if(this._timer){clearTimeout(this._timer);this._timer=null}if(this._eventSource){this._eventSource.close();this._eventSource=null}this.readyState=2}},{key:"addEventListener",value:function e(t,n){var r=t.toString();if(!(r in this._listeners)){this._listeners[r]=[];if(this._eventSource){this._eventSource.addEventListener(r,this._onevent_wrapped)}}var i=this._listeners[r];if(!i.includes(n)){this._listeners[r]=[].concat(s(i),[n])}}},{key:"removeEventListener",value:function e(t,n){var r=t.toString();if(r in this._listeners){var i=this._listeners[r];var o=i.filter(function(e){return e!==n});if(o.length>0){this._listeners[r]=o}else{delete this._listeners[r];if(this._eventSource){this._eventSource.removeEventListener(r,this._onevent_wrapped)}}}}}]);return r}();e.default=n})?r.apply(t,i):r)||(e.exports=o)}]);
+
+            // https://github.com/fanout/reconnecting-eventsource
+var sse = new ReconnectingEventSource('/_api/reload_sse', {
+    withCredentials: false,
+    max_retry_time: 5000,
+});
+var backendBuildId = null;
+sse.addEventListener("backend_build_id", function (msg) {
+    var newBackendBuildId = msg.data;
+    if (backendBuildId === null) {
+        backendBuildId = newBackendBuildId;
+    } else if (backendBuildId !== newBackendBuildId) {
+        sse.close();
+        location.reload();
+    }
+});
+sse.addEventListener("reload", function (msg) {
+    sse.close();
+    location.reload();
+});
+
+          </script>
+    
+          <script type="module">
+            import init from '/_api/pkg/frontend.js';
+            init('/_api/pkg/frontend_bg.wasm');
+          </script>
+        </body>
+        
+        </html>

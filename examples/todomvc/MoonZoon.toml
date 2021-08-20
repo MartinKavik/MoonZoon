@@ -1,7 +1,7 @@
 port = 8080
 # port = 8443
 https = false
-cache_busting = true
+cache_busting = false
 backend_log_level = "warn" # "error" / "warn" / "info" / "debug" / "trace"
 
 [redirect]
