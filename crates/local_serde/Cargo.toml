@@ -1,0 +1,8 @@
+[package]
+name = "local_serde"
+version = "0.1.0"
+authors = ["Martin Kavík <martin@kavik.cz>"]
+edition = "2018"
+
+[dependencies]
+serde-lite = { version = "0.1.1", features = ["derive"], default-features = false }

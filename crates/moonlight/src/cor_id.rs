@@ -25,19 +25,19 @@ impl FromStr for CorId {
 }
 
 impl Serialize for CorId {
-    fn serialize(&self) -> Result<Intermediate, serde_lite::Error> {
+    fn serialize(&self) -> Result<Intermediate, local_serde::Error> {
         Ok(Intermediate::String(self.to_string()))
     }
 }
 
 impl Deserialize for CorId {
-    fn deserialize(intermediate: &Intermediate) -> Result<Self, serde_lite::Error> {
+    fn deserialize(intermediate: &Intermediate) -> Result<Self, local_serde::Error> {
         intermediate
             .as_str()
             .ok_or_else(|| {
-                serde_lite::Error::invalid_value("CorId can be deserialized only from String")
+                local_serde::Error::invalid_value("CorId can be deserialized only from String")
             })?
             .parse()
-            .map_err(|error| serde_lite::Error::invalid_value(error))
+            .map_err(|error| local_serde::Error::invalid_value(error))
     }
 }
