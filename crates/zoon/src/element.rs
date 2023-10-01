@@ -71,17 +71,36 @@ pub use raw_el_or_text::RawElOrText;
 
 pub trait ElementUnchecked {
     fn into_raw_unchecked(self) -> RawElOrText;
+    
+    fn box_into_raw_unchecked(self: Box<Self>) -> RawElOrText {
+        unimplemented!()
+    }
 }
 
 impl<REW: RawElWrapper> ElementUnchecked for REW {
     fn into_raw_unchecked(self) -> RawElOrText {
         self.into_raw_el().into()
     }
+    fn box_into_raw_unchecked(self: Box<Self>) -> RawElOrText {
+        self.into_raw_unchecked()
+    }
 }
 
 // ------ Element ------
 
-pub trait Element: ElementUnchecked + Sized {
+pub trait Element: ElementUnchecked {
+    fn into_raw(self) -> RawElOrText where Self: Sized {
+        self.into_raw_unchecked()
+    }
+}
+
+impl ElementUnchecked for Box<dyn Element> {
+    fn into_raw_unchecked(self) -> RawElOrText {
+        self.box_into_raw_unchecked()
+    }
+}
+
+impl Element for Box<dyn Element> {
     fn into_raw(self) -> RawElOrText {
         self.into_raw_unchecked()
     }
