@@ -150,7 +150,10 @@ async fn compile_with_cargo(
     #[allow(unused_assignments)]
     let mut active_toolchain = String::new();
 
+    let mut is_rust_nightly = false;
+
     if frontend_multithreading {
+        is_rust_nightly = true;
         args.push("nightly")
     } else {
         // @TODO Rustup requires to select a toolchain but we don't want to force `stable`.
@@ -212,13 +215,22 @@ async fn compile_with_cargo(
 
     let mut envs: Vec<(String, &str)> = vec![];
 
-    #[allow(unused_assignments)]
-    let mut rustflags_value = String::new();
+    let mut rustflags = Vec::<&'static str>::new();
     if frontend_multithreading {
-        let mut rustflags = vec!["-C target-feature=+atomics,+bulk-memory,+mutable-globals"];
+        rustflags.push("-C target-feature=+atomics,+bulk-memory,+mutable-globals");
         if build_mode.is_not_dev() {
             rustflags.push("-Z location-detail=none");
         }
+    }
+    // @TODO Remove the condition and update the argument once threads are supported by the stable Rust compiler
+    if is_rust_nightly {
+        // https://blog.rust-lang.org/2023/11/09/parallel-rustc.html
+        rustflags.push("-Z threads=8");
+    }
+
+    #[allow(unused_assignments)]
+    let mut rustflags_value = String::new();
+    if !rustflags.is_empty() {
         rustflags_value = rustflags.join(" ");
         envs.push(("RUSTFLAGS".to_owned(), &rustflags_value));
     }

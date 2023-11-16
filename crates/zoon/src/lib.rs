@@ -51,6 +51,8 @@ pub use futures_channel::{
     oneshot,
 };
 pub use futures_signals_ext::*;
+// @TODO why is it unused import?
+#[allow(unused_imports)]
 pub use futures_util_ext::*;
 pub use gensym::gensym;
 pub use hsluv::{hsluv, HSLuv};
