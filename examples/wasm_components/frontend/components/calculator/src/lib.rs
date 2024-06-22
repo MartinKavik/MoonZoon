@@ -11,7 +11,7 @@ wit_bindgen::generate!({
             }
 
             // Register plugin in the host
-            // register-plugin: func(plugin: plugin) -> result<_, error>;
+            register-plugin: func(plugin: plugin) -> result<_, error>;
 
             log: func(message: string);
         }
@@ -67,13 +67,13 @@ impl calculator_interface::Guest for Calculator {
 impl plugin_interface::Guest for Calculator {
     fn init_plugin(data: plugin_interface::InitData) {
         log!("calculator init-data: '{data:#?}'");
-        // let plugin = plugin_host_interface::Plugin {
-        //     name: "Calculator".to_owned(),
-        //     version: None,
-        // };
-        // if let Err(error) = plugin_host_interface::register_plugin(&plugin) {
-        //     log!("plugin registration failed: '{error}'");
-        // }
+        let plugin = plugin_host_interface::Plugin {
+            name: "Calculator".to_owned(),
+            version: None,
+        };
+        if let Err(error) = plugin_host_interface::register_plugin(&plugin) {
+            log!("plugin registration failed: '{error}'");
+        }
     }
 }
 

@@ -5,6 +5,9 @@ use std::rc::Rc;
 use wasm_component_layer::{Component, Func, FuncType, ValueType, ComponentType};
 use zoon::{eprintln, println, *};
 
+// @TODO Use macro to generate host bindings once implemented
+// https://github.com/DouglasDwyer/wasm_component_layer
+
 type Engine = wasm_component_layer::Engine<js_wasm_runtime_layer::Engine>;
 type Store = Rc<RefCell<wasm_component_layer::Store<(), js_wasm_runtime_layer::Engine>>>;
 type Linker = Rc<RefCell<wasm_component_layer::Linker>>;
