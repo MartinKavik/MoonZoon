@@ -9,7 +9,7 @@ _WARNING:_ MoonZoon is in the phase of early development and a CI pipeline / lin
 - [Rust](https://www.rust-lang.org/)
   ```bash
   rustup update
-  rustc -V # rustc 1.78.0 (9b00956e5 2024-04-29)
+  rustc -V # rustc 1.79.0 (129f3b996 2024-06-10)
   ```
 
 - [cargo-make](https://sagiegurari.github.io/cargo-make/)
@@ -72,6 +72,7 @@ _WARNING:_ MoonZoon is in the phase of early development and a CI pipeline / lin
         // "examples/video/Cargo.toml",
         // "examples/viewport/Cargo.toml",
         // "examples/wasm_components/Cargo.toml",
+        // "examples/wasm_components_wasmer_old/Cargo.toml",
         // "examples/web_components/Cargo.toml",
         // "examples/web_workers/Cargo.toml",
         "examples/wgpu/Cargo.toml",
