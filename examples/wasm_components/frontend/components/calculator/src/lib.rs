@@ -2,7 +2,7 @@ wit_bindgen::generate!({
     inline: r#"
         package wasm-components:calculator;
 
-        interface host {
+        interface plugin-host {
             type error = string;
 
             record plugin {
@@ -11,7 +11,7 @@ wit_bindgen::generate!({
             }
 
             // Register plugin in the host
-            register-plugin: func(plugin: plugin) -> result<_, error>;
+            // register-plugin: func(plugin: plugin) -> result<_, error>;
 
             log: func(message: string);
         }
@@ -32,21 +32,20 @@ wit_bindgen::generate!({
         }
 
         world guest {
-            import host;
+            import plugin-host;
             export plugin;
             export calculator;
         }
     "#,
 });
 
-use wasm_components::calculator::host as host_interface;
 use exports::wasm_components::calculator::{
-    calculator as calculator_interface,
-    plugin as plugin_interface,
+    calculator as calculator_interface, plugin as plugin_interface,
 };
+use wasm_components::calculator::plugin_host as plugin_host_interface;
 
 macro_rules! log {
-    ($($arg:tt)*) => (host_interface::log(&format!($($arg)*)))
+    ($($arg:tt)*) => (plugin_host_interface::log(&format!($($arg)*)))
 }
 
 struct Calculator;
@@ -68,13 +67,13 @@ impl calculator_interface::Guest for Calculator {
 impl plugin_interface::Guest for Calculator {
     fn init_plugin(data: plugin_interface::InitData) {
         log!("calculator init-data: '{data:#?}'");
-        let plugin = host_interface::Plugin {
-            name: "Calculator".to_owned(),
-            version: None,
-        };
-        if let Err(error) = host_interface::register_plugin(&plugin) {
-            log!("plugin registration failed: '{error}'");
-        }
+        // let plugin = plugin_host_interface::Plugin {
+        //     name: "Calculator".to_owned(),
+        //     version: None,
+        // };
+        // if let Err(error) = plugin_host_interface::register_plugin(&plugin) {
+        //     log!("plugin registration failed: '{error}'");
+        // }
     }
 }
 

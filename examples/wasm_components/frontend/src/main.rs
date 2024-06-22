@@ -1,15 +1,39 @@
 use anyhow::anyhow;
-use zoon::{eprintln, println, *};
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::ops::DerefMut;
+use std::rc::Rc;
+use wasm_component_layer::{Component, Linker, Func, FuncType, ValueType, ComponentType};
+use zoon::{eprintln, println, *};
 
-type Engine = wasm_runtime_layer::Engine<js_wasm_runtime_layer::Engine>;
-type Store = Rc<RefCell<wasm_runtime_layer::Store<(), js_wasm_runtime_layer::Engine>>>;
+type Engine = wasm_component_layer::Engine<js_wasm_runtime_layer::Engine>;
+type Store = Rc<RefCell<wasm_component_layer::Store<(), js_wasm_runtime_layer::Engine>>>;
 
 static DROP_ZONE_ACTIVE: Lazy<Mutable<bool>> = lazy::default();
 static COMPONENT_SAID: Lazy<Mutable<Option<String>>> = lazy::default();
 
-async fn load_and_use_component(file_list: web_sys::FileList, engine: Engine, store: Store) -> anyhow::Result<()> {
+// struct PluginHost;
+
+// impl plugin_host_interface::Guest for PluginHost {
+//     fn register_plugin(&mut self, plugin: host::Plugin) -> Result<(), host::Error> {
+//         println!("[host]: Plugin to registrate: {plugin:#?}");
+//         Err("testing error :)".to_owned())
+//     }
+
+//     fn log(&mut self, message: &str) {
+//         println!("[guest]: {message}");
+//     }
+// }
+
+async fn load_and_use_component(
+    file_list: web_sys::FileList,
+    engine: Engine,
+    store: Store,
+) -> anyhow::Result<()> {
+    let mut borrowed_store = store.borrow_mut();
+    let mut store = borrowed_store.deref_mut();
+
+    let mut new_component_said = String::new();
+
     let file_bytes = file_list
         .get(0)
         .ok_or_else(|| anyhow!("failed to get the dropped file"))?
@@ -18,6 +42,55 @@ async fn load_and_use_component(file_list: web_sys::FileList, engine: Engine, st
         .map_err(|error| anyhow!("{error:#?}"))?
         .apply_ref(js_sys::Uint8Array::new)
         .to_vec();
+
+    let component = Component::new(&engine, &file_bytes)?;
+    // component.imports().
+
+    let mut linker = Linker::default();
+    
+    let plugin_host_interface = linker.define_instance("wasm-components:calculator/plugin-host".try_into().unwrap_throw())?;
+    
+    // let register_plugin_func = Func::new(
+    //     &mut store, 
+    //     FuncType::new(params, results), 
+    //     f
+    // );
+    // plugin_host_interface.define_func("register-plugin", register_plugin_func);
+    // register-plugin: func(plugin: plugin) -> result<_, error>;
+    
+    let log_func = Func::new(
+        &mut store, 
+        FuncType::new([ValueType::String], []),
+        |_store, params, _returns| {
+            let message = String::from_value(&params[0]).unwrap_throw();
+            println!("[guest]: {message}");
+            Ok(())
+        }
+    );
+    plugin_host_interface.define_func("log", log_func)?;
+
+    let instance = linker.instantiate(&mut store, &component)?;
+
+    let calculator_interface = instance
+        .exports()
+        .instance(&"wasm-components:calculator/calculator".try_into()?)
+        .unwrap_throw();
+
+    let plugin_interface = instance
+        .exports()
+        .instance(&"wasm-components:calculator/plugin".try_into()?)
+        .unwrap_throw();
+
+    let sum = calculator_interface
+        .func("sum")
+        .unwrap_throw()
+        .typed::<(f64, f64), f64>()?;
+
+    let a = 1.2;
+    let b = 3.4;
+    let sum_a_b = sum.call(&mut store, (a, b))?;
+
+    new_component_said.push_str(&format!("\n{a} + {b} = {sum_a_b}"));
 
     // struct Host;
 
@@ -46,29 +119,22 @@ async fn load_and_use_component(file_list: web_sys::FileList, engine: Engine, st
     // };
     // calculator.init_plugin(&mut store, init_data)?;
 
-    // let mut new_component_said = String::new();
-
-    // let a = 1.2;
-    // let b = 3.4;
-    // let sum_a_b = calculator.sum(&mut store, a, b)?;
-    // new_component_said.push_str(&format!("\n{a} + {b} = {sum_a_b}"));
-
     // let addends = [1.25, 2.5, 3.1, 60.];
     // let addends_sum = calculator.sum_list(&mut store, &addends)?;
     // new_component_said.push_str(&format!("\nSum {addends:?} = {addends_sum}"));
 
-    // COMPONENT_SAID.set(Some(new_component_said));
+    COMPONENT_SAID.set(Some(new_component_said));
     println!("Done!");
     Ok(())
 }
 
 fn main() {
-    start_app("app" , root);
+    start_app("app", root);
 }
 
 fn root() -> impl Element {
-    let engine = wasm_runtime_layer::Engine::new(js_wasm_runtime_layer::Engine::default());
-    let store = Rc::new(RefCell::new(wasm_runtime_layer::Store::new(&engine, ())));
+    let engine = wasm_component_layer::Engine::new(js_wasm_runtime_layer::Engine::default());
+    let store = Rc::new(RefCell::new(wasm_component_layer::Store::new(&engine, ())));
     Column::new()
         .after_remove(clone!((engine, store) move |_| {
             drop(store);
