@@ -2,11 +2,12 @@ use anyhow::anyhow;
 use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::rc::Rc;
-use wasm_component_layer::{Component, Linker, Func, FuncType, ValueType, ComponentType};
+use wasm_component_layer::{Component, Func, FuncType, ValueType, ComponentType};
 use zoon::{eprintln, println, *};
 
 type Engine = wasm_component_layer::Engine<js_wasm_runtime_layer::Engine>;
 type Store = Rc<RefCell<wasm_component_layer::Store<(), js_wasm_runtime_layer::Engine>>>;
+type Linker = Rc<RefCell<wasm_component_layer::Linker>>;
 
 static DROP_ZONE_ACTIVE: Lazy<Mutable<bool>> = lazy::default();
 static COMPONENT_SAID: Lazy<Mutable<Option<String>>> = lazy::default();
@@ -28,11 +29,10 @@ async fn load_and_use_component(
     file_list: web_sys::FileList,
     engine: Engine,
     store: Store,
+    linker: Linker,
 ) -> anyhow::Result<()> {
     let mut borrowed_store = store.borrow_mut();
     let mut store = borrowed_store.deref_mut();
-
-    let mut new_component_said = String::new();
 
     let file_bytes = file_list
         .get(0)
@@ -44,32 +44,8 @@ async fn load_and_use_component(
         .to_vec();
 
     let component = Component::new(&engine, &file_bytes)?;
-    // component.imports().
 
-    let mut linker = Linker::default();
-    
-    let plugin_host_interface = linker.define_instance("wasm-components:calculator/plugin-host".try_into().unwrap_throw())?;
-    
-    // let register_plugin_func = Func::new(
-    //     &mut store, 
-    //     FuncType::new(params, results), 
-    //     f
-    // );
-    // plugin_host_interface.define_func("register-plugin", register_plugin_func);
-    // register-plugin: func(plugin: plugin) -> result<_, error>;
-    
-    let log_func = Func::new(
-        &mut store, 
-        FuncType::new([ValueType::String], []),
-        |_store, params, _returns| {
-            let message = String::from_value(&params[0]).unwrap_throw();
-            println!("[guest]: {message}");
-            Ok(())
-        }
-    );
-    plugin_host_interface.define_func("log", log_func)?;
-
-    let instance = linker.instantiate(&mut store, &component)?;
+    let instance = linker.borrow().instantiate(&mut store, &component)?;
 
     let calculator_interface = instance
         .exports()
@@ -85,6 +61,8 @@ async fn load_and_use_component(
         .func("sum")
         .unwrap_throw()
         .typed::<(f64, f64), f64>()?;
+
+    let mut new_component_said = String::new();
 
     let a = 1.2;
     let b = 3.4;
@@ -135,15 +113,40 @@ fn main() {
 fn root() -> impl Element {
     let engine = wasm_component_layer::Engine::new(js_wasm_runtime_layer::Engine::default());
     let store = Rc::new(RefCell::new(wasm_component_layer::Store::new(&engine, ())));
+    
+    let mut linker = wasm_component_layer::Linker::default();
+    let plugin_host_interface = linker.define_instance("wasm-components:calculator/plugin-host".try_into().unwrap_throw()).unwrap_throw();
+    
+    // let register_plugin_func = Func::new(
+    //     &mut store, 
+    //     FuncType::new(params, results), 
+    //     f
+    // );
+    // plugin_host_interface.define_func("register-plugin", register_plugin_func);
+    // register-plugin: func(plugin: plugin) -> result<_, error>;
+    
+    let log_func = Func::new(
+        store.borrow_mut().deref_mut(), 
+        FuncType::new([ValueType::String], []),
+        |_store, params, _returns| {
+            let message = String::from_value(&params[0]).unwrap_throw();
+            println!("[guest]: {message}");
+            Ok(())
+        }
+    );
+    plugin_host_interface.define_func("log", log_func).unwrap_throw();
+    let linker = Rc::new(RefCell::new(linker));
+    
     Column::new()
-        .after_remove(clone!((engine, store) move |_| {
+        .after_remove(clone!((engine, store, linker) move |_| {
+            drop(linker);
             drop(store);
             drop(engine);
         }))
         .s(Width::exact(300))
         .s(Align::center())
         .s(Gap::new().y(20))
-        .item(drop_zone(engine, store))
+        .item(drop_zone(engine, store, linker))
         .item_signal(COMPONENT_SAID.signal_cloned().map_some(|text| {
             Paragraph::new()
                 .s(Align::new().center_x())
@@ -156,7 +159,7 @@ fn root() -> impl Element {
         }))
 }
 
-fn drop_zone(engine: Engine, store: Store) -> impl Element {
+fn drop_zone(engine: Engine, store: Store, linker: Linker) -> impl Element {
     El::new()
         .s(Height::exact(200))
         .s(RoundedCorners::all(30))
@@ -196,8 +199,8 @@ fn drop_zone(engine: Engine, store: Store) -> impl Element {
                         event.prevent_default();
                         DROP_ZONE_ACTIVE.set_neq(false);
                         let file_list = event.data_transfer().unwrap_throw().files().unwrap_throw();
-                        Task::start(clone!((engine, store) async move {
-                            if let Err(error) = load_and_use_component(file_list, engine, store).await {
+                        Task::start(clone!((engine, store, linker) async move {
+                            if let Err(error) = load_and_use_component(file_list, engine, store, linker).await {
                                 eprintln!("{error:#}");
                             }
                         }));
