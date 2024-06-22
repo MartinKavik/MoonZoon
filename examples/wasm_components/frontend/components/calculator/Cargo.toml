@@ -1,17 +1,16 @@
 [package]
-name = "calculator"
+name = "calculator_plugin"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
-[workspace]
-
 [dependencies]
-# wai-bindgen-rust = { path = "../../../../../../wai/crates/rust-wasm", features = ["macros"], default-features = false }
-wai-bindgen-rust = { version = "0.2.1", features = ["macros"], default-features = false }
+wit-bindgen = "0.26.0"
 
+# Cargo recommends to set it in the workspace root, but it isn't possible:
+# https://github.com/rust-lang/cargo/issues/9330
 [profile.release]
 lto = true
 opt-level = 'z'
