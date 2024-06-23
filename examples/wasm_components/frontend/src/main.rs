@@ -108,6 +108,11 @@ async fn load_and_use_component(
         .unwrap_throw()
         .typed::<(f64, f64), f64>()?;
 
+    let sum_list = calculator_interface
+        .func("sum-list")
+        .unwrap_throw()
+        .typed::<Vec<f64>, f64>()?;
+
     let plugin_interface = instance
         .exports()
         .instance(&"wasm-components:calculator/plugin".try_into()?)
@@ -120,12 +125,6 @@ async fn load_and_use_component(
 
     let mut new_component_said = String::new();
 
-    let a = 1.2;
-    let b = 3.4;
-    let sum_a_b = sum.call(store.borrow_mut().deref_mut(), (a, b))?;
-
-    new_component_said.push_str(&format!("\n{a} + {b} = {sum_a_b}"));
-
     init_plugin.call(
         store.borrow_mut().deref_mut(),
         InitData {
@@ -134,9 +133,14 @@ async fn load_and_use_component(
         },
     )?;
 
-    // let addends = [1.25, 2.5, 3.1, 60.];
-    // let addends_sum = calculator.sum_list(&mut store, &addends)?;
-    // new_component_said.push_str(&format!("\nSum {addends:?} = {addends_sum}"));
+    let a = 1.2;
+    let b = 3.4;
+    let sum_a_b = sum.call(store.borrow_mut().deref_mut(), (a, b))?;
+    new_component_said.push_str(&format!("\n{a} + {b} = {sum_a_b}"));
+
+    let addends = vec![1.25, 2.5, 3.1, 60.];
+    let addends_sum = sum_list.call(store.borrow_mut().deref_mut(), addends.clone())?;
+    new_component_said.push_str(&format!("\nSum {addends:?} = {addends_sum}"));
 
     COMPONENT_SAID.set(Some(new_component_said));
     println!("Done!");
