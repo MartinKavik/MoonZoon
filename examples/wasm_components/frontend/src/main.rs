@@ -2,11 +2,17 @@ use anyhow::anyhow;
 use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::rc::Rc;
-use wasm_component_layer::{Component, Func, FuncType, ValueType, ComponentType};
+use std::sync::Arc;
+use wasm_component_layer::{
+    Component, ComponentType, Func, FuncType, OptionType, Record, RecordType, ResultType,
+    ResultValue, TypeIdentifier, UnaryComponentType, Value, ValueType,
+};
 use zoon::{eprintln, println, *};
 
 // @TODO Use macro to generate host bindings once implemented
 // https://github.com/DouglasDwyer/wasm_component_layer
+
+// @TODO There are probably bugs in `wasm_component_layer` (0.1.17), see `@TODO`s below
 
 type Engine = wasm_component_layer::Engine<js_wasm_runtime_layer::Engine>;
 type Store = Rc<RefCell<wasm_component_layer::Store<(), js_wasm_runtime_layer::Engine>>>;
@@ -15,18 +21,61 @@ type Linker = Rc<RefCell<wasm_component_layer::Linker>>;
 static DROP_ZONE_ACTIVE: Lazy<Mutable<bool>> = lazy::default();
 static COMPONENT_SAID: Lazy<Mutable<Option<String>>> = lazy::default();
 
-// struct PluginHost;
+struct InitData {
+    instance_id: u32,
+    host_name: String,
+}
 
-// impl plugin_host_interface::Guest for PluginHost {
-//     fn register_plugin(&mut self, plugin: host::Plugin) -> Result<(), host::Error> {
-//         println!("[host]: Plugin to registrate: {plugin:#?}");
-//         Err("testing error :)".to_owned())
-//     }
+impl ComponentType for InitData {
+    fn ty() -> ValueType {
+        ValueType::Record(
+            RecordType::new(
+                Some(TypeIdentifier::new("init-data", None)),
+                [
+                    ("instance-id", ValueType::U32),
+                    ("host-name", ValueType::String),
+                ],
+            )
+            .unwrap_throw(),
+        )
+    }
+    fn from_value(value: &Value) -> anyhow::Result<Self> {
+        if let Value::Record(record) = value {
+            // @TODO check record name?
+            let instance_id =
+                u32::from_value(&record.field("instance-id").unwrap_throw()).unwrap_throw();
+            let host_name =
+                String::from_value(&record.field("host-name").unwrap_throw()).unwrap_throw();
+            return Ok(Self {
+                instance_id,
+                host_name,
+            });
+        }
+        Err(anyhow!("InitData has to be Value::Record!"))
+    }
+    fn into_value(self) -> anyhow::Result<Value> {
+        // @TODO why `Record::from_fields` set different field indices?
+        Ok(Value::Record(
+            Record::new(
+                RecordType::new(
+                    Some(TypeIdentifier::new("init-data", None)),
+                    [
+                        ("instance-id", ValueType::U32),
+                        ("host-name", ValueType::String),
+                    ],
+                )
+                .unwrap_throw(),
+                [
+                    ("instance-id", self.instance_id.into_value().unwrap_throw()),
+                    ("host-name", self.host_name.into_value().unwrap_throw()),
+                ],
+            )
+            .unwrap_throw(),
+        ))
+    }
+}
 
-//     fn log(&mut self, message: &str) {
-//         println!("[guest]: {message}");
-//     }
-// }
+impl UnaryComponentType for InitData {}
 
 async fn load_and_use_component(
     file_list: web_sys::FileList,
@@ -34,9 +83,6 @@ async fn load_and_use_component(
     store: Store,
     linker: Linker,
 ) -> anyhow::Result<()> {
-    let mut borrowed_store = store.borrow_mut();
-    let mut store = borrowed_store.deref_mut();
-
     let file_bytes = file_list
         .get(0)
         .ok_or_else(|| anyhow!("failed to get the dropped file"))?
@@ -48,16 +94,13 @@ async fn load_and_use_component(
 
     let component = Component::new(&engine, &file_bytes)?;
 
-    let instance = linker.borrow().instantiate(&mut store, &component)?;
+    let instance = linker
+        .borrow()
+        .instantiate(store.borrow_mut().deref_mut(), &component)?;
 
     let calculator_interface = instance
         .exports()
         .instance(&"wasm-components:calculator/calculator".try_into()?)
-        .unwrap_throw();
-
-    let plugin_interface = instance
-        .exports()
-        .instance(&"wasm-components:calculator/plugin".try_into()?)
         .unwrap_throw();
 
     let sum = calculator_interface
@@ -65,40 +108,31 @@ async fn load_and_use_component(
         .unwrap_throw()
         .typed::<(f64, f64), f64>()?;
 
+    let plugin_interface = instance
+        .exports()
+        .instance(&"wasm-components:calculator/plugin".try_into()?)
+        .unwrap_throw();
+
+    let init_plugin = plugin_interface
+        .func("init-plugin")
+        .unwrap_throw()
+        .typed::<InitData, ()>()?;
+
     let mut new_component_said = String::new();
 
     let a = 1.2;
     let b = 3.4;
-    let sum_a_b = sum.call(&mut store, (a, b))?;
+    let sum_a_b = sum.call(store.borrow_mut().deref_mut(), (a, b))?;
 
     new_component_said.push_str(&format!("\n{a} + {b} = {sum_a_b}"));
 
-    // struct Host;
-
-    // impl host::Host for Host {
-    //     fn register_plugin(&mut self, plugin: host::Plugin) -> Result<(), host::Error> {
-    //         println!("[host]: Plugin to registrate: {plugin:#?}");
-    //         Err("testing error :)".to_owned())
-    //     }
-
-    //     fn log(&mut self, message: &str) {
-    //         println!("[guest]: {message}");
-    //     }
-    // }
-
-    // let mut store = Store::default();
-    // let module = Module::new(&store, file_bytes).await?;
-    // let mut imports = Imports::new();
-
-    // let init_host = host::add_to_imports(&mut store, &mut imports, Host);
-    // let (calculator, instance) = calculator::Calculator::instantiate(&mut store, &module, &mut imports).await?;
-    // init_host(&instance, &store)?;
-
-    // let init_data = calculator::InitData {
-    //     instance_id: 3,
-    //     host_name: "MoonZoon Wasm app",
-    // };
-    // calculator.init_plugin(&mut store, init_data)?;
+    init_plugin.call(
+        store.borrow_mut().deref_mut(),
+        InitData {
+            instance_id: 3,
+            host_name: "MoonZoon Wasm app".to_owned(),
+        },
+    )?;
 
     // let addends = [1.25, 2.5, 3.1, 60.];
     // let addends_sum = calculator.sum_list(&mut store, &addends)?;
@@ -116,30 +150,70 @@ fn main() {
 fn root() -> impl Element {
     let engine = wasm_component_layer::Engine::new(js_wasm_runtime_layer::Engine::default());
     let store = Rc::new(RefCell::new(wasm_component_layer::Store::new(&engine, ())));
-    
+
     let mut linker = wasm_component_layer::Linker::default();
-    let plugin_host_interface = linker.define_instance("wasm-components:calculator/plugin-host".try_into().unwrap_throw()).unwrap_throw();
-    
-    // let register_plugin_func = Func::new(
-    //     &mut store, 
-    //     FuncType::new(params, results), 
-    //     f
-    // );
-    // plugin_host_interface.define_func("register-plugin", register_plugin_func);
-    // register-plugin: func(plugin: plugin) -> result<_, error>;
-    
+    let plugin_host_interface = linker
+        .define_instance(
+            "wasm-components:calculator/plugin-host"
+                .try_into()
+                .unwrap_throw(),
+        )
+        .unwrap_throw();
+
+    let register_plugin_func = Func::new(
+        store.borrow_mut().deref_mut(),
+        FuncType::new(
+            [ValueType::Record(
+                RecordType::new(
+                    Some(TypeIdentifier::new("plugin-params", None)),
+                    [
+                        ("name", ValueType::String),
+                        (
+                            "version",
+                            ValueType::Option(OptionType::new(ValueType::F32)),
+                        ),
+                    ],
+                )
+                .unwrap_throw(),
+            )],
+            [ValueType::Result(ResultType::new(
+                None,
+                Some(ValueType::String),
+            ))],
+        ),
+        // @TODO Why it's not fired?
+        |_store, params, returns| {
+            let plugin = &params[0];
+            println!("[host]: Plugin to registrate: {plugin:#?}");
+            returns[0] = Value::Result(
+                ResultValue::new(
+                    ResultType::new(None, Some(ValueType::String)),
+                    Err(Some(Value::String(Arc::from("testing error :)")))),
+                )
+                .unwrap_throw(),
+            );
+            Ok(())
+        },
+    );
+    plugin_host_interface
+        .define_func("register-plugin", register_plugin_func)
+        .unwrap_throw();
+
     let log_func = Func::new(
-        store.borrow_mut().deref_mut(), 
+        store.borrow_mut().deref_mut(),
         FuncType::new([ValueType::String], []),
         |_store, params, _returns| {
             let message = String::from_value(&params[0]).unwrap_throw();
             println!("[guest]: {message}");
             Ok(())
-        }
+        },
     );
-    plugin_host_interface.define_func("log", log_func).unwrap_throw();
+    plugin_host_interface
+        .define_func("log", log_func)
+        .unwrap_throw();
+
     let linker = Rc::new(RefCell::new(linker));
-    
+
     Column::new()
         .after_remove(clone!((engine, store, linker) move |_| {
             drop(linker);

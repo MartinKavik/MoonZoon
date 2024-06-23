@@ -5,13 +5,13 @@ wit_bindgen::generate!({
         interface plugin-host {
             type error = string;
 
-            record plugin {
+            record plugin-params {
                 name: string,
                 version: option<float32>,
             }
 
             // Register plugin in the host
-            register-plugin: func(plugin: plugin) -> result<_, error>;
+            register-plugin: func(plugin: plugin-params) -> result<_, error>;
 
             log: func(message: string);
         }
@@ -67,12 +67,14 @@ impl calculator_interface::Guest for Calculator {
 impl plugin_interface::Guest for Calculator {
     fn init_plugin(data: plugin_interface::InitData) {
         log!("calculator init-data: '{data:#?}'");
-        let plugin = plugin_host_interface::Plugin {
+        let plugin = plugin_host_interface::PluginParams {
             name: "Calculator".to_owned(),
             version: None,
         };
         if let Err(error) = plugin_host_interface::register_plugin(&plugin) {
             log!("plugin registration failed: '{error}'");
+        } else {
+            log!("plugin registration succeeded");
         }
     }
 }
